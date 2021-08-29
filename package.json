@@ -1,0 +1,24 @@
+{
+  "name": "esim",
+  "version": "1.0.0",
+  "description": "esimerkkejä",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": " git@github.com:Kitilaakso"
+  },
+  "keywords": [
+    "nodejs"
+  ],
+  "author": "Kiti Laakso",
+  "license": "ISC",
+  "dependencies": {
+    "csv-parser": "^3.0.0",
+    "dayjs": "^1.10.6",
+    "fs": "^0.0.1-security",
+    "tslint": "^6.1.3"
+  }
+}
