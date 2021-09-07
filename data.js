@@ -95,7 +95,7 @@ const promise = new Promise((resolve) => {
  * OPETUSDATAA
  */
 function doTrainData(arrTrain) {
-    //lisätään viikonnumero 1-52 sekä "kauden"(noin kuukausi, 4 viikon jakso) numero
+    //lisätään viikonnumero 1-53 sekä "kauden"(noin kuukausi, 4 viikon jakso) numero
     let weeksNumber = [];
 
     for (let i = 0; i < arrTrain.length; i++) {
@@ -150,9 +150,9 @@ function weekDate(date) {
     return d;
 }
 
-/** hakee taulukkoon viikonnumeron(1-52) 
+/** hakee taulukkoon viikonnumeron(1-53) 
  * ja nimen 
- * (= onko kuukauden 1,2,3,4 vaiko vaillinainen viikko eli kuukausi vaihtuu kesken viikon, jolloin numero 0 ) päivämäärän mukaan */
+ * (= onko kuukauden 1,2,3,4 jne. viikko)  */
 function getWeeksNumbers(YY, MM, DD) {
     //halutut arvot tähän viikkonumero ja kauden numero
     let weeksNumber = [];
@@ -161,11 +161,8 @@ function getWeeksNumbers(YY, MM, DD) {
     let targetDate = dayjs(`${YY}-${MM}-${DD}`).format('YYYY-MM-DD');
     //haetaan viikko
     let targetWeek = getWeek(targetDate);
-    console.log("TARGETWEEK " + targetWeek);
-    //haetaan viikolista
+    //haetaan viikkolista
     week = getWeekMonth(YY, MM, DD);
-
-    //console.log("WIIKKO " + JSON.stringify(week));
     week.forEach(element => {
         //jos halutun pvm viikko kyseessä
         if (element.num == targetWeek) {
@@ -178,17 +175,14 @@ function getWeeksNumbers(YY, MM, DD) {
             //return weeksNumber;
         }
     });
-    // jos ei löytynyt on kyseessä sellainen alkuviikko, joka ei näy,
-    // koska on ehkä edellisen kuukauden puolella
-    // laitetaan 0:seksi viikoksi
-    // TO DO TUTKI onko viimeinen viikko vielä tätä kuuta
-    if (!finded) {
-        weeksNumber.push(
-            1,
-            targetWeek
-        );
-
-    }
+    /* Ei pitäisi tulla vastaan
+     if (!finded) {
+          weeksNumber.push(
+              100,
+              targetWeek
+          );
+  
+      }*/
     return weeksNumber;
 }
 
@@ -222,60 +216,142 @@ function getWeek(date) {
 };
 
 /** Saa päivän ja palauttaa viikkolistan, jossa
- * viikon alkupäivä ma ja su loppupäivä, viikonnumero 1-52, 
+ * viikon alkupäivä ma ja su loppupäivä, 
+ * viikonnumero 1-53, 
  * sekä viikkonumero sen mukaan monesko "alkio" kyseessä
- * HUOM! Aloittaa ensimmäisestä KOKONAISESTA VIIKOSTA
+ * 
+ * HUOM! Palauttaa viikkoja sen mukaan montako niitä on 
+ * targetdayn viikon maanantai - targetdayn kuukauden viimeinen
  *  lähde: https://gist.github.com/markthiessen/3883242 */
 const getWeekMonth = (year, month, day) => {
     let date = new Date(year, month, day);
 
     //targetdate, haluttu pvm
     let targetDate = dayjs(`${year}-${month}-${day}`).format('YYYY-MM-DD');
-    console.log("TARGET " + targetDate);
+
     //asetetaan päivä jonka lista halutaan 
-    let target = getWeek(targetDate);
+    //let target = getWeek(targetDate);
 
-    //LÄHDE tästä eteenpäin
-    const firstDay = dayjs(`${year}-${month}`).startOf('month').format('d');
+    //palauttaa monesko päivä tämä päivä on tällä viikolla
+    const firstDayWeek = dayjs(`${year}-${month}-${day}`).startOf('day').format('d');
 
-    let startDay;
-    if (firstDay === 1) {
-        startDay = dayjs(`${year}-${month}`).format('YYYY-MM-DD');
-    } else {
-        const diffDays = (8 - firstDay) % 7
-        startDay = dayjs(`${year}-${month}`).startOf('month').add(diffDays, 'days').format('YYYY-MM-DD')
-    }
+    // palauttaa targetdayn viikon ekapäivän tässä kuukaudessa
+    let startDayMonth = getStartDay(firstDayWeek, year, month, day);
 
-    const lastDay = dayjs(`${year}-${month}`).endOf('month').format('d');
+    //palauttaa viikon ekapäivän vaikka se olisi edellisessä kuukaudessa
+    let startDayWeek = getStartDayWeek(firstDayWeek, year, month, day);
 
-    let endDay;
-    if (lastDay === 0) {
-        endDay = dayjs(`${year}-${month}`).endOf('month').format('YYYY-MM-DD')
-    } else {
-        const lastDiffDays = 6 - lastDay
-        endDay = dayjs(`${year}-${month}`).startOf('month').add(1, 'month').add(lastDiffDays, 'days').format('YYYY-MM-DD');
-    }
+    //viimeinen päivä targetdayn kuussa
+    let endDayMonth = dayjs(`${year}-${month}-${day}`).endOf('month').format('YYYY-MM-DD');
 
-    const weeks = (dayjs(endDay).diff(dayjs(startDay), 'days') + 1) / 7;
+    /* Käyttää kuukauden vikapäivää ja kuukauden ekapäivää
+    näin saadaan kaikki kuukauden viikot, jotka sattuvat
+    päivän aluelle */
+    const weeks = (dayjs(endDayMonth).diff(dayjs(startDayMonth), 'week') + 1);
 
     const weekList = []
     for (let i = 1; i <= weeks; i++) {
         weekList.push({
             weekName: `${i}`,
             //wiikon numero
-            num: getWeek(startDay),
-            startDay,
-            endDay: dayjs(startDay).add(6, 'days').format('YYYY-MM-DD'),
-            range: `${dayjs(startDay).format('MM-DD')}~${dayjs(startDay).add(6, 'days').format('MM-DD')}`
+            num: getWeek(startDayMonth),
+            //haluttu pvm, pysyvä arvo
+            targetDate,
+            //targetdaten viikon ekapäivä vaikka eri kuussa, pysyvä arvo
+            startDayWeek,
+            //kuukauden viimeinen päivä, pysyvä arvo
+            endDayMonth,
+            //kokonaisen viikon ekapäivä; muuttuva arvo
+            startDayMonth,
+            //tämän viikon loppupäivä vaikka eri kuussa, muuttuu viikon mukaan
+            endDay: dayjs(startDayMonth).add(6, 'day').format('YYYY-MM-DD'),
+            /* viikon ekapäivä vaikka eri kuukaudessa, vuodessa,
+            viikon loppupäivä vaikka eri kuukaudessa, vuodessa
+            */
+            range: `${dayjs(startDayMonth).format('YYYY-MM-DD')}~${dayjs(startDayMonth).add(6, 'day').format('YYYY-MM-DD')}`
         })
-        startDay = dayjs(startDay).add(7, 'days').format('YYYY-MM-DD');
+        startDayMonth = dayjs(startDayMonth).add(7, 'day').format('YYYY-MM-DD');
 
         //käydään hakemassa haluttu päivä
-        let d = weekDate(startDay);
+        let d = weekDate(startDayMonth);
     }
-    console.log("RANGE " + JSON.stringify(weekList));
+    console.log(":" + JSON.stringify(weekList));
     return weekList;
 }
+/** Saa numeron, 
+ * joka kertoo monesko päivä targetday on tässä viikossa
+ * Etsii kokonaisen viikon ja palauttaa
+ * viimeisen päivän tästä viikosta
+ */
+function getStartDay(firstDay, year, month, day) {
+    let startDay;
+    //const diffDays = (8 - firstDay) % 7; seuraava kokonaisen viikon ma
+    const diffDays = (1 - firstDay) % 7;
+    firstDay === 1 ? startDay = dayjs(`${year}-${month}-${day}`).format('YYYY-MM-DD') : startDay = dayjs(`${year}-${month}-${day}`).startOf('day').add(diffDays, 'day').format('YYYY-MM-DD');
+    return startDay;
+    /*  if (firstDay === 1) {
+          startDay = dayjs(`${year}-${month}`).format('YYYY-MM-DD');
+          return startDay;
+      } else {
+          const diffDays = (8 - firstDay) % 7
+          startDay = dayjs(`${year}-${month}`).startOf('month').add(diffDays, 'days').format('YYYY-MM-DD')
+          return startDay;
+      }*/
+}
+
+/** Saa numeron, 
+ * joka kertoo monesko päivä targetday on tässä viikossa
+ * Palauttaa viimeisen päivän tästä viikosta
+ */
+function getStartDayWeek(firstDay, year, month, day) {
+    let startDay;
+    // const diffDays = 8 - firstDay;
+    firstDay === 1 ? startDay = dayjs(`${year}-${month}`).format('YYYY-MM-DD') : startDay = dayjs(`${year}-${month}-${day}`).startOf('week').add(1, 'day').format('YYYY-MM-DD');
+    return startDay;
+    /* if (firstDay === 1) {
+         startDay = dayjs(`${year}-${month}`).format('YYYY-MM-DD');
+         console.log("startday 1" + startDay);
+         return startDay;
+     } else {
+         const diffDays = (7 - firstDay) % 7;
+         startDay = dayjs(`${year}-${month}-${day}`).startOf('week').add(1, 'day').format('YYYY-MM-DD');
+         //startDay = dayjs(`${year}-${month}-${day}`).startOf('day').add(diffDays, 'days').format('YYYY-MM-DD')
+         console.log("startday " + startDay);
+         return startDay;
+     }*/
+}
+
+/** */
+function getLastDayMonth(lastDay, year, month, day) {
+    let endDay;
+    if (lastDay === 0) {
+        endDay = dayjs(`${year}-${month}`).endOf('month').format('YYYY-MM-DD')
+        console.log("end day" + endDay);
+        return endDay;
+    } else {
+        const lastDiffDays = 6 - lastDay;
+        endDay = dayjs(`${year}-${month}`).endOf('month').add(1, 'day').add(lastDiffDays, 'days').format('YYYY-MM-DD');
+        console.log("END " + endDay);
+        return endDay;
+    }
+}
+
+/** Palauttaa wiikon viimeisen päivän 
+ * vaikka se olisi seuraavassa kuukaudessa*/
+function getLastDayWeek(lastDay, year, month, day) {
+    let endDay;
+    if (lastDay === 0) {
+        endDay = dayjs(`${year}-${month}`).endOf('month').format('YYYY-MM-DD')
+        return endDay;
+    } else {
+        const lastDiffDays = 6 - lastDay
+        endDay = dayjs(`${year}-${month}`).startOf('week').add(1, 'day').add(lastDiffDays, 'days').format('YYYY-MM-DD');
+        console.log("end " + endDay);
+        return endDay;
+    }
+}
+
+
 /** Hakee tiedot tietokannasta ja luo niistä 
  * testidatan eli datan jolle halutaan arvoja.
  * Käytetään randomForestissa
